@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { ProductItem } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
+import { useImageCache } from "@/context/ImageContext";
 
 interface HeroCarouselProps {
   products: ProductItem[];
@@ -19,6 +20,7 @@ interface HeroCarouselProps {
 
 export function HeroCarousel({ products, loading }: HeroCarouselProps) {
   const { addToCart } = useCart();
+  const { preloadImages, getCachedUrl } = useImageCache();
   const sectionRef = useRef<HTMLElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -27,6 +29,7 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
   const [touchDeltaX, setTouchDeltaX] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [initialImageLoaded, setInitialImageLoaded] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const slides = React.useMemo(() => {
@@ -36,6 +39,26 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
   }, [products]);
 
   const totalSlides = slides.length;
+
+  // Preload and cache slides images
+  useEffect(() => {
+    if (slides.length > 0) {
+      const allSlideImages = slides.map((s) => s.images[0]).filter(Boolean);
+      preloadImages(allSlideImages);
+    }
+  }, [slides, preloadImages]);
+
+  // Fallback to avoid getting stuck if image was cached or pre-loaded
+  useEffect(() => {
+    if (typeof window !== "undefined" && slides.length > 0 && slides[0]?.images?.[0]) {
+      const src = slides[0].images[0];
+      const img = new window.Image();
+      img.src = src;
+      if (img.complete) {
+        setInitialImageLoaded(true);
+      }
+    }
+  }, [slides]);
 
   // Ensure index stays in bounds if slides count changes
   useEffect(() => {
@@ -53,6 +76,7 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
       const visible = Math.min(1, Math.max(0, -rect.top / rect.height));
       setScrollProgress(visible);
     };
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -125,17 +149,12 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
     setIsPaused(false);
   };
 
-  if (loading) {
-    return (
-      <div className="w-full h-[70svh] md:h-[92vh] lg:h-[calc(100vh-5rem)] min-h-[380px] md:min-h-[550px] bg-brand-cream animate-pulse" />
-    );
-  }
-  if (!totalSlides) return null;
+  const showPreloader = loading || !totalSlides || !initialImageLoaded;
 
   const slide = slides[currentIndex];
   const hasDiscount =
-    slide.discount_price > 0 && slide.discount_price < slide.price;
-  const displayPrice = hasDiscount ? slide.discount_price : slide.price;
+    slide && slide.discount_price > 0 && slide.discount_price < slide.price;
+  const displayPrice = slide ? (hasDiscount ? slide.discount_price : slide.price) : 0;
 
   // Scroll-out: content lifts and fades as user scrolls
   const contentOpacity = Math.max(0, 1 - scrollProgress * 2.5);
@@ -144,7 +163,7 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full h-[70svh] md:h-[92vh] lg:h-[calc(100vh-5rem)] min-h-[380px] md:min-h-[550px] overflow-hidden select-none"
+      className="relative w-full h-[70svh] md:h-[92vh] lg:h-[calc(100vh-5rem)] min-h-[380px] md:min-h-[550px] overflow-hidden select-none bg-brand-ivory"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => {
         if (isDragging) onMouseUp();
@@ -159,6 +178,48 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
       aria-roledescription="carousel"
       aria-label="Featured Collections"
     >
+      {/* Pre-loader with Logo and Revolving Aura */}
+      <div
+        className={`absolute inset-0 z-50 flex flex-col items-center justify-center bg-brand-ivory transition-opacity duration-700 ease-out ${
+          showPreloader ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        {/* Ambient revolving aura / glow container */}
+        <div className="relative flex items-center justify-center">
+          {/* Glowing pulse background */}
+          <div className="absolute w-44 h-44 sm:w-52 sm:h-52 rounded-full bg-gradient-to-tr from-brand-peacock/15 via-brand-pink/15 to-brand-gold/20 blur-2xl animate-pulse" />
+
+          {/* Outer dashed spinning ring */}
+          <div className="absolute w-36 h-36 sm:w-44 sm:h-44 rounded-full border border-dashed border-brand-gold/60 animate-[spin_8s_linear_infinite]" />
+
+          {/* Revolving multi-color brand ring */}
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-transparent border-t-brand-peacock border-r-brand-gold border-b-brand-pink animate-[spin_2s_linear_infinite]" />
+
+          {/* Center Logo Badge */}
+          <div className="absolute flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full border border-border-gold bg-brand-ivory p-1 shadow-card">
+            <div className="relative h-full w-full overflow-hidden rounded-full animate-pulse">
+              <Image
+                src="/logo_badge.png"
+                alt="Lamha Arts & Craft Loading"
+                fill
+                priority
+                className="object-cover"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Brand Text under Preloader */}
+        <div className="mt-6 flex flex-col items-center text-center space-y-1.5 px-4">
+          <span className="font-serif text-sm sm:text-base font-bold tracking-[0.2em] text-brand-peacock uppercase">
+            Lamha Arts & Craft
+          </span>
+          <span className="font-sans text-[10px] sm:text-xs font-semibold uppercase tracking-[0.24em] text-brand-pink">
+            Handcrafted with cultural devotion
+          </span>
+        </div>
+      </div>
+
       {/* Background slides */}
       {slides.map((s, idx) => (
         <div
@@ -171,13 +232,16 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
           aria-hidden={idx !== currentIndex}
         >
           <Image
-            src={s.images[0]}
+            src={getCachedUrl(s.images[0])}
             alt={s.name}
             fill
             priority={idx === 0}
             className="object-cover object-center"
             sizes="100vw"
             unoptimized
+            onLoad={() => {
+              if (idx === 0) setInitialImageLoaded(true);
+            }}
           />
         </div>
       ))}
@@ -226,87 +290,89 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
       </button>
 
       {/* Centered Content — scrolls up and fades out */}
-      <div
-        className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6 sm:px-16 pb-14 sm:pb-0 pointer-events-none"
-        style={{
-          opacity: contentOpacity,
-          transform: `translateY(-${contentY}px)`,
-          transition: "none",
-        }}
-      >
-        <div className="max-w-2xl w-full pointer-events-auto space-y-5">
-          {/* Category label — subdued, no icon */}
-          <p className="font-sans text-xs font-semibold uppercase tracking-[0.22em] text-brand-ivory/55">
-            {slide.category}
-          </p>
-
-          {/* Product name */}
-          <h2
-            className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-ivory leading-tight"
-            style={{ textShadow: "0 2px 32px rgba(0,0,0,0.5)" }}
-          >
-            {slide.name}
-          </h2>
-
-          {/* One-liner */}
-          {(slide.one_liner || slide.description) && (
-            <p className="font-sans text-sm sm:text-base text-brand-ivory/65 max-w-md mx-auto leading-relaxed">
-              {slide.one_liner ?? slide.description?.slice(0, 120) + "…"}
+      {slide && (
+        <div
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6 sm:px-16 pb-14 sm:pb-0 pointer-events-none"
+          style={{
+            opacity: contentOpacity,
+            transform: `translateY(-${contentY}px)`,
+            transition: "none",
+          }}
+        >
+          <div className="max-w-2xl w-full pointer-events-auto space-y-5">
+            {/* Category label — subdued, no icon */}
+            <p className="font-sans text-xs font-semibold uppercase tracking-[0.22em] text-brand-ivory/55">
+              {slide.category}
             </p>
-          )}
 
-          {/* Price */}
-          <div className="flex items-baseline justify-center gap-2.5">
-            <span className="font-price text-2xl sm:text-3xl font-bold text-brand-ivory tracking-tight">
-              ₹{displayPrice}
-            </span>
-            {hasDiscount && (
-              <span className="font-price text-sm text-brand-ivory/40 line-through">
-                ₹{slide.price}
-              </span>
+            {/* Product name */}
+            <h2
+              className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-ivory leading-tight"
+              style={{ textShadow: "0 2px 32px rgba(0,0,0,0.5)" }}
+            >
+              {slide.name}
+            </h2>
+
+            {/* One-liner */}
+            {(slide.one_liner || slide.description) && (
+              <p className="font-sans text-sm sm:text-base text-brand-ivory/65 max-w-md mx-auto leading-relaxed">
+                {slide.one_liner ?? slide.description?.slice(0, 120) + "…"}
+              </p>
             )}
-          </div>
 
-          {/* CTA buttons */}
-          <div className="flex items-center justify-center gap-3 flex-wrap pt-1">
-            <button
-              onClick={() =>
-                addToCart(
-                  {
-                    id: slide.id,
-                    name: slide.name,
-                    price: slide.price,
-                    discount_price: slide.discount_price,
-                    image: slide.images[0],
-                  },
-                  1,
-                )
-              }
-              className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-brand-ivory transition-all active:scale-[0.97]"
-              style={{
-                background: "rgba(20,107,107,0.75)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(20,107,107,0.5)",
-              }}
-            >
-              <ShoppingBag className="w-4 h-4" />
-              Add to Bag
-            </button>
+            {/* Price */}
+            <div className="flex items-baseline justify-center gap-2.5">
+              <span className="font-price text-2xl sm:text-3xl font-bold text-brand-ivory tracking-tight">
+                ₹{displayPrice}
+              </span>
+              {hasDiscount && (
+                <span className="font-price text-sm text-brand-ivory/40 line-through">
+                  ₹{slide.price}
+                </span>
+              )}
+            </div>
 
-            <Link
-              href={`/products/${slide.id}`}
-              className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium text-brand-ivory/80 hover:text-brand-ivory transition-all"
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.14)",
-              }}
-            >
-              View Details
-            </Link>
+            {/* CTA buttons */}
+            <div className="flex items-center justify-center gap-3 flex-wrap pt-1">
+              <button
+                onClick={() =>
+                  addToCart(
+                    {
+                      id: slide.id,
+                      name: slide.name,
+                      price: slide.price,
+                      discount_price: slide.discount_price,
+                      image: slide.images[0],
+                    },
+                    1,
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-brand-ivory transition-all active:scale-[0.97]"
+                style={{
+                  background: "rgba(20,107,107,0.75)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(20,107,107,0.5)",
+                }}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                Add to Bag
+              </button>
+
+              <Link
+                href={`/products/${slide.id}`}
+                className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium text-brand-ivory/80 hover:text-brand-ivory transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                }}
+              >
+                View Details
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Bottom bar: dots + scroll cue */}
       <div

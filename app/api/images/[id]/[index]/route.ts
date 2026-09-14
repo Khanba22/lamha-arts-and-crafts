@@ -58,13 +58,17 @@ export async function GET(
       }
     }
 
+    const url = new URL(_request.url);
+    const hasVersion = url.searchParams.has("v");
+    const cacheControl = hasVersion
+      ? "public, max-age=31536000, immutable"
+      : "public, max-age=86400, stale-while-revalidate=604800";
+
     return new Response(new Uint8Array(buf), {
       status: 200,
       headers: {
         "Content-Type": mime,
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-        Pragma: "no-cache",
-        Expires: "0",
+        "Cache-Control": cacheControl,
       },
     });
   } catch (error: unknown) {

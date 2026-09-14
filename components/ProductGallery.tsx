@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ZoomIn, X, ShoppingBag } from "lucide-react";
+import { useImageCache } from "@/context/ImageContext";
 
 interface ProductGalleryProps {
   images: string[];
@@ -10,10 +11,17 @@ interface ProductGalleryProps {
 }
 
 export function ProductGallery({ images, productName }: ProductGalleryProps) {
+  const { preloadImages, getCachedUrl } = useImageCache();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (images && images.length > 0) {
+      preloadImages(images);
+    }
+  }, [images, preloadImages]);
 
   const hasImages = images && images.length > 0;
   const currentImage = hasImages ? images[selectedIndex] : null;
@@ -96,7 +104,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 aria-label={`View image ${idx + 1} of ${images.length}`}
               >
                 <Image
-                  src={img}
+                  src={getCachedUrl(img)}
                   alt={`${productName} thumbnail ${idx + 1}`}
                   fill
                   unoptimized
@@ -118,7 +126,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
       >
         {currentImage && (
           <Image
-            src={currentImage}
+            src={getCachedUrl(currentImage)}
             alt={`${productName} - Image ${selectedIndex + 1}`}
             fill
             priority
@@ -211,7 +219,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
 
           <div className="relative w-full max-w-4xl aspect-square max-h-[85vh]">
             <Image
-              src={currentImage}
+              src={getCachedUrl(currentImage)}
               alt={`${productName} zoomed`}
               fill
               unoptimized

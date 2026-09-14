@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useProducts, ProductItem } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
+import { useImageCache } from "@/context/ImageContext";
 import { ProductGallery } from "@/components/ProductGallery";
 
 interface ProductPageProps {
@@ -26,6 +27,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const { id } = use(params);
   const { products, loading: contextLoading } = useProducts();
   const { addToCart } = useCart();
+  const { getCachedUrl } = useImageCache();
 
   const [product, setProduct] = useState<ProductItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -486,11 +488,12 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                     <div className="relative aspect-square w-full bg-brand-cream overflow-hidden">
                       {rel.images && rel.images[0] ? (
                         <Image
-                          src={rel.images[0]}
+                          src={getCachedUrl(rel.images[0])}
                           alt={rel.name}
                           fill
                           sizes="(max-width: 768px) 50vw, 25vw"
                           className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                          unoptimized
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-brand-charcoal/30">

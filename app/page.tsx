@@ -1,12 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useProducts } from "@/context/ProductsContext";
 import { HeroCarousel } from "@/components/HeroCarousel";
 import { ProductCatalog } from "@/components/ProductCatalog";
 
 export default function Home() {
   const { products, loading } = useProducts();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
+      }
+      window.scrollTo(0, 0);
+    }
+  }, []);
 
   return (
     <div className="flex flex-col flex-1 w-full">

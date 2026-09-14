@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import Image from "next/image";
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useImageCache } from "@/context/ImageContext";
 
 export function CartDrawer() {
   const {
@@ -16,6 +17,7 @@ export function CartDrawer() {
     totalItems,
     totalPrice,
   } = useCart();
+  const { getCachedUrl } = useImageCache();
 
   // Prevent background scrolling when drawer is open
   useEffect(() => {
@@ -122,7 +124,7 @@ export function CartDrawer() {
                     <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-brand-cream border border-border-soft flex items-center justify-center">
                       {item.image ? (
                         <Image
-                          src={item.image}
+                          src={getCachedUrl(item.image)}
                           alt={item.name}
                           fill
                           className="object-cover"

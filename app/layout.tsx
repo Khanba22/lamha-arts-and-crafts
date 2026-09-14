@@ -3,6 +3,7 @@ import { Playfair_Display, Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import "./globals.css";
 import { ProductsProvider } from "@/context/ProductsContext";
 import { CartProvider } from "@/context/CartContext";
+import { ImageProvider } from "@/context/ImageContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -45,12 +46,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-brand-ivory text-brand-charcoal font-ui">
         <ProductsProvider>
-          <CartProvider>
-            <Header />
-            <main className="flex-1 flex flex-col">{children}</main>
-            <Footer />
-            <CartDrawer />
-          </CartProvider>
+          <ImageProvider>
+            <CartProvider>
+              <Header />
+              <main className="flex-1 flex flex-col">{children}</main>
+              <Footer />
+              <CartDrawer />
+            </CartProvider>
+          </ImageProvider>
         </ProductsProvider>
       </body>
     </html>

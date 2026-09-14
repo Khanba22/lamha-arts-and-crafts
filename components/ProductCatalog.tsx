@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ProductItem } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
+import { useImageCache } from "@/context/ImageContext";
 import { FilterDrawer } from "./FilterDrawer";
 
 interface ProductCatalogProps {
@@ -22,8 +23,11 @@ interface ProductCatalogProps {
   loading: boolean;
 }
 
+const PAGE_SIZE = 12;
+
 export function ProductCatalog({ products, loading }: ProductCatalogProps) {
   const { addToCart } = useCart();
+  const { preloadImages, getCachedUrl } = useImageCache();
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -33,6 +37,23 @@ export function ProductCatalog({ products, loading }: ProductCatalogProps) {
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("featured");
   const [addedItemId, setAddedItemId] = useState<string | null>(null);
+
+  // Pagination state (Progressive scroll loading)
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Reset pagination on filter or search changes
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [
+    searchQuery,
+    selectedCategories,
+    selectedOccasions,
+    selectedPriceRanges,
+    inStockOnly,
+    sortBy,
+  ]);
 
   // UI state for filter popover/modal
   const [filterDrawerOpen, setFilterDrawerOpen] = useState<boolean>(false);
@@ -209,6 +230,52 @@ export function ProductCatalog({ products, loading }: ProductCatalogProps) {
     sortBy,
     priceBrackets,
   ]);
+
+  const visibleProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
+
+  // Preload images ONLY for the currently visible products
+  useEffect(() => {
+    if (visibleProducts.length > 0) {
+      const currentImages = visibleProducts
+        .map((p) => p.images?.[0])
+        .filter(Boolean);
+      preloadImages(currentImages);
+    }
+  }, [visibleProducts, preloadImages]);
+
+  // Infinite scroll intersection observer
+  useEffect(() => {
+    if (visibleCount >= filteredProducts.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first && first.isIntersecting) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount((prev) =>
+              Math.min(prev + PAGE_SIZE, filteredProducts.length)
+            );
+            setIsLoadingMore(false);
+          }, 120);
+        }
+      },
+      { rootMargin: "350px" }
+    );
+
+    const target = sentinelRef.current;
+    if (target) {
+      observer.observe(target);
+    }
+
+    return () => {
+      if (target) {
+        observer.unobserve(target);
+      }
+    };
+  }, [visibleCount, filteredProducts.length]);
 
   const handleAddToCart = (product: ProductItem) => {
     const hasDiscount = product.discount_price > 0 && product.discount_price < product.price;
@@ -475,115 +542,135 @@ export function ProductCatalog({ products, loading }: ProductCatalogProps) {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-6">
-            {filteredProducts.map((product) => {
-              const hasRealDiscount =
-                product.discount_price > 0 && product.discount_price < product.price;
-              const displayPrice = hasRealDiscount ? product.discount_price : product.price;
-              const isJustAdded = addedItemId === product.id;
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-6">
+              {visibleProducts.map((product) => {
+                const hasRealDiscount =
+                  product.discount_price > 0 && product.discount_price < product.price;
+                const displayPrice = hasRealDiscount ? product.discount_price : product.price;
+                const isJustAdded = addedItemId === product.id;
 
-              return (
-                <div
-                  key={product.id}
-                  className="group relative flex flex-col justify-between rounded-xl border border-border-soft bg-brand-cream/50 overflow-hidden transition-colors hover:border-brand-peacock/40"
-                >
-                  {/* Single Surface Card: Clickable to Product Preview */}
-                  <Link
-                    href={`/products/${product.id}`}
-                    className="block focus:outline-none"
-                    aria-label={`View details for ${product.name}`}
+                return (
+                  <div
+                    key={product.id}
+                    className="group relative flex flex-col justify-between rounded-xl border border-border-soft bg-brand-cream/50 overflow-hidden transition-colors hover:border-brand-peacock/40"
                   >
-                    <div className="relative aspect-square w-full bg-brand-cream border-b border-border-subtle overflow-hidden">
-                      {product.images && product.images.length > 0 ? (
-                        <Image
-                          src={product.images[0]}
-                          alt={product.name}
-                          fill
-                          className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                          unoptimized
-                        />
-                      ) : (
-                        <ShoppingBag className="w-10 h-10 text-brand-peacock/20" />
-                      )}
+                    {/* Single Surface Card: Clickable to Product Preview */}
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="block focus:outline-none"
+                      aria-label={`View details for ${product.name}`}
+                    >
+                      <div className="relative aspect-square w-full bg-brand-cream border-b border-border-subtle overflow-hidden">
+                        {product.images && product.images.length > 0 ? (
+                          <Image
+                            src={getCachedUrl(product.images[0])}
+                            alt={product.name}
+                            fill
+                            className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                            unoptimized
+                          />
+                        ) : (
+                          <ShoppingBag className="w-10 h-10 text-brand-peacock/20" />
+                        )}
 
-                      {/* Quiet Top Left Indicator (No Floating Pill Sticker) */}
-                      {product.highlighted && (
-                        <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider text-brand-gold bg-brand-ivory px-2 py-0.5 rounded border border-border-gold">
-                          Featured
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-sans text-[11px] font-semibold text-brand-charcoal/60 uppercase tracking-wider truncate">
-                          {product.category}
-                        </span>
-                        {product.inventory_size === 0 && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-peacock flex-shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-peacock" />
-                            <span>In Stock</span>
+                        {/* Quiet Top Left Indicator (No Floating Pill Sticker) */}
+                        {product.highlighted && (
+                          <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider text-brand-gold bg-brand-ivory px-2 py-0.5 rounded border border-border-gold">
+                            Featured
                           </span>
                         )}
                       </div>
 
-                      <h3 className="font-serif text-base font-bold text-brand-charcoal line-clamp-1 group-hover:text-brand-peacock transition-colors">
-                        {product.name}
-                      </h3>
+                      {/* Content Section */}
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-sans text-[11px] font-semibold text-brand-charcoal/60 uppercase tracking-wider truncate">
+                            {product.category}
+                          </span>
+                          {product.inventory_size === 0 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-peacock flex-shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-brand-peacock" />
+                              <span>In Stock</span>
+                            </span>
+                          )}
+                        </div>
 
-                      {product.one_liner ? (
-                        <p className="font-sans text-xs text-brand-charcoal/70 line-clamp-2 min-h-[32px] leading-relaxed">
-                          {product.one_liner}
-                        </p>
-                      ) : (
-                        <p className="font-sans text-xs text-brand-charcoal/70 line-clamp-2 min-h-[32px] leading-relaxed">
-                          {product.description?.slice(0, 80)}...
-                        </p>
-                      )}
-                    </div>
-                  </Link>
+                        <h3 className="font-serif text-base font-bold text-brand-charcoal line-clamp-1 group-hover:text-brand-peacock transition-colors">
+                          {product.name}
+                        </h3>
 
-                  {/* Card Action Row */}
-                  <div className="px-4 pb-4 pt-2 flex items-center justify-between gap-2 border-t border-border-subtle mt-auto">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="font-price text-lg font-bold text-brand-peacock">
-                        ₹{displayPrice}
-                      </span>
-                      {hasRealDiscount && (
-                        <span className="font-price text-xs text-brand-charcoal/45 line-through">
-                          ₹{product.price}
+                        {product.one_liner ? (
+                          <p className="font-sans text-xs text-brand-charcoal/70 line-clamp-2 min-h-[32px] leading-relaxed">
+                            {product.one_liner}
+                          </p>
+                        ) : (
+                          <p className="font-sans text-xs text-brand-charcoal/70 line-clamp-2 min-h-[32px] leading-relaxed">
+                            {product.description?.slice(0, 80)}...
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+
+                    {/* Card Action Row */}
+                    <div className="px-4 pb-4 pt-2 flex items-center justify-between gap-2 border-t border-border-subtle mt-auto">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-price text-lg font-bold text-brand-peacock">
+                          ₹{displayPrice}
                         </span>
-                      )}
-                    </div>
+                        {hasRealDiscount && (
+                          <span className="font-price text-xs text-brand-charcoal/45 line-through">
+                            ₹{product.price}
+                          </span>
+                        )}
+                      </div>
 
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        isJustAdded
-                          ? "bg-brand-gold text-brand-ivory"
-                          : "bg-brand-peacock text-brand-ivory hover:bg-brand-peacock/90"
-                      }`}
-                      aria-label={`Add ${product.name} to cart`}
-                    >
-                      {isJustAdded ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Added</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>Add</span>
-                        </>
-                      )}
-                    </button>
+                      <button
+                        onClick={() => handleAddToCart(product)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          isJustAdded
+                            ? "bg-brand-gold text-brand-ivory"
+                            : "bg-brand-peacock text-brand-ivory hover:bg-brand-peacock/90"
+                        }`}
+                        aria-label={`Add ${product.name} to cart`}
+                      >
+                        {isJustAdded ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Added</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <span>Add</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Scrollable Pagination Sentinel & Status */}
+            <div className="w-full flex flex-col items-center justify-center pt-10 pb-4">
+              {visibleCount < filteredProducts.length ? (
+                <div ref={sentinelRef} className="flex flex-col items-center gap-2.5 py-4">
+                  <div className="w-6 h-6 border-2 border-brand-peacock/20 border-t-brand-peacock rounded-full animate-spin" />
+                  <span className="font-sans text-xs font-medium text-brand-charcoal/60 tracking-wide">
+                    Loading more handcrafted treasures ({visibleProducts.length} of {filteredProducts.length})...
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+              ) : filteredProducts.length > PAGE_SIZE ? (
+                <div className="text-center py-6 border-t border-border-soft w-full max-w-sm mx-auto">
+                  <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-charcoal/50">
+                    Showing all {filteredProducts.length} handcrafted products
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          </>
         )}
       </div>
     </section>
