@@ -34,15 +34,19 @@ export function CartDrawer() {
   const handleWhatsAppOrder = () => {
     if (cart.length === 0) return;
 
-    let message = "Namaste Lamha Arts & Craft! 🙏\n\nI would like to place an order for the following items:\n\n";
+    let message =
+      "Namaste Lamha Arts & Craft! 🙏\n\nI would like to place an order for the following items:\n\n";
     cart.forEach((item, index) => {
-      const price = item.discount_price && item.discount_price > 0 ? item.discount_price : item.price;
+      const price =
+        item.discount_price && item.discount_price > 0
+          ? item.discount_price
+          : item.price;
       message += `${index + 1}. *${item.name}* (Qty: ${item.quantity}) - ₹${price * item.quantity}\n`;
     });
     message += `\n*Total Amount:* ₹${totalPrice}\n\nPlease confirm product availability and delivery details.`;
 
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/919999999999?text=${encoded}`, "_blank");
+    window.open(`https://wa.me/917083989848?text=${encoded}`, "_blank");
   };
 
   return (
@@ -90,7 +94,8 @@ export function CartDrawer() {
                 Your cart is empty
               </h3>
               <p className="mt-1 text-sm text-brand-charcoal/70 max-w-xs">
-                Explore our festive collections to add handcrafted decor and treasures to your cart.
+                Explore our festive collections to add handcrafted decor and
+                treasures to your cart.
               </p>
               <button
                 onClick={closeDrawer}
@@ -136,11 +141,11 @@ export function CartDrawer() {
                             {item.name}
                           </h4>
                           <div className="mt-1 flex items-center gap-2 text-xs">
-                            <span className="font-semibold text-brand-peacock">
+                            <span className="font-price font-semibold text-brand-peacock">
                               ₹{currentPrice}
                             </span>
                             {item.discount_price && item.discount_price > 0 && (
-                              <span className="text-brand-charcoal/50 line-through">
+                              <span className="font-price text-brand-charcoal/50 line-through">
                                 ₹{item.price}
                               </span>
                             )}
@@ -159,7 +164,9 @@ export function CartDrawer() {
                       <div className="mt-3 flex items-center justify-between">
                         <div className="flex items-center rounded-lg border border-border-soft bg-brand-cream/60">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity - 1)
+                            }
                             className="p-1 text-brand-charcoal hover:text-brand-peacock disabled:opacity-30"
                             aria-label="Decrease quantity"
                           >
@@ -169,7 +176,9 @@ export function CartDrawer() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity + 1)
+                            }
                             className="p-1 text-brand-charcoal hover:text-brand-peacock"
                             aria-label="Increase quantity"
                           >
@@ -177,7 +186,7 @@ export function CartDrawer() {
                           </button>
                         </div>
 
-                        <span className="font-serif text-sm font-bold text-brand-peacock">
+                        <span className="font-price text-sm font-bold text-brand-peacock">
                           ₹{currentPrice * item.quantity}
                         </span>
                       </div>
@@ -196,7 +205,7 @@ export function CartDrawer() {
               <span className="text-sm font-medium text-brand-charcoal/80">
                 Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"})
               </span>
-              <span className="font-serif text-xl font-bold text-brand-peacock">
+              <span className="font-price text-xl font-bold text-brand-peacock">
                 ₹{totalPrice}
               </span>
             </div>

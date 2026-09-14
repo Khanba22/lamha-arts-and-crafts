@@ -13,7 +13,7 @@ export function Header() {
   const whatsappMessage = encodeURIComponent(
     "Namaste Lamha Arts & Craft! 🙏 I would like to inquire about your handcrafted festive and pooja decor collections."
   );
-  const whatsappUrl = `https://wa.me/919999999999?text=${whatsappMessage}`;
+  const whatsappUrl = `https://wa.me/917875123939?text=${whatsappMessage}`;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border-soft bg-brand-ivory/95 backdrop-blur-md shadow-card transition-all">
@@ -52,7 +52,7 @@ export function Header() {
         <div className="hidden md:flex items-center gap-4 lg:gap-6">
           {/* Our Story Tab */}
           <Link
-            href="#our-story"
+            href="/about"
             className="group flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-brand-charcoal transition-colors hover:text-brand-peacock"
           >
             <BookOpen className="w-4 h-4 text-brand-charcoal/60 group-hover:text-brand-peacock transition-colors" />
@@ -116,7 +116,7 @@ export function Header() {
         <div className="border-t border-border-soft bg-brand-cream/95 px-6 py-4 md:hidden">
           <nav className="flex flex-col space-y-3">
             <Link
-              href="#our-story"
+              href="/about"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-brand-charcoal hover:bg-brand-ivory hover:text-brand-peacock"
             >

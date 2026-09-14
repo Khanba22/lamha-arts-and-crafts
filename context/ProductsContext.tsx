@@ -24,38 +24,11 @@ interface ProductsContextType {
   refreshProducts: () => Promise<void>;
 }
 
-const CACHE_KEY = "netals_products_cache_v2";
-const CACHE_TIME_KEY = "netals_products_cache_time_v2";
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
-function getInitialCachedProducts(): ProductItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const cachedTimeStr = localStorage.getItem(CACHE_TIME_KEY);
-    const cachedDataStr = localStorage.getItem(CACHE_KEY);
-
-    if (cachedTimeStr && cachedDataStr) {
-      const cachedTime = parseInt(cachedTimeStr, 10);
-      const age = Date.now() - cachedTime;
-
-      if (age < ONE_DAY_MS) {
-        const parsedProducts: ProductItem[] = JSON.parse(cachedDataStr);
-        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-          return parsedProducts;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("Failed to read from cache:", e);
-  }
-  return [];
-}
-
 export function ProductsProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<ProductItem[]>(getInitialCachedProducts);
-  const [loading, setLoading] = useState<boolean>(() => products.length === 0);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFromApi = useCallback(async () => {
@@ -63,7 +36,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
 
-      const res = await fetch("/api/products");
+      const res = await fetch("/api/products", { cache: "no-store" });
       const result = await res.json();
 
       if (!result.success) {
@@ -72,13 +45,6 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
       const items: ProductItem[] = result.data || [];
       setProducts(items);
-
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(items));
-        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-      } catch (storageErr) {
-        console.warn("Could not cache products to localStorage:", storageErr);
-      }
     } catch (err: unknown) {
       console.error("Products fetch error:", err);
       const message = err instanceof Error ? err.message : "Failed to load products";
@@ -91,28 +57,26 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let ignore = false;
 
-    async function initializeProducts() {
-      if (products.length > 0) {
-        return;
-      }
+    // Clear legacy localStorage cache keys if present
+    try {
+      localStorage.removeItem("netals_products_cache_v2");
+      localStorage.removeItem("netals_products_cache_time_v2");
+      localStorage.removeItem("netals_products_cache");
+      localStorage.removeItem("netals_products_cache_time");
+    } catch {
+      // Ignore in non-browser environments
+    }
 
+    async function loadFreshProducts() {
       try {
-        const res = await fetch("/api/products");
+        const res = await fetch("/api/products", { cache: "no-store" });
         const result = await res.json();
         if (ignore) return;
 
-        if (!result.success) {
+        if (result.success && Array.isArray(result.data)) {
+          setProducts(result.data);
+        } else {
           throw new Error(result.error || "Failed to fetch products");
-        }
-
-        const items: ProductItem[] = result.data || [];
-        setProducts(items);
-
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(items));
-          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-        } catch (storageErr) {
-          console.warn("Could not cache products to localStorage:", storageErr);
         }
       } catch (err: unknown) {
         if (ignore) return;
@@ -125,12 +89,12 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    initializeProducts();
+    loadFreshProducts();
 
     return () => {
       ignore = true;
     };
-  }, [products.length]);
+  }, []);
 
   return (
     <ProductsContext.Provider

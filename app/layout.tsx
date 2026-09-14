@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Plus_Jakarta_Sans, Alex_Brush } from "next/font/google";
+import { Playfair_Display, Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import "./globals.css";
 import { ProductsProvider } from "@/context/ProductsContext";
 import { CartProvider } from "@/context/CartContext";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 
 const displaySerif = Playfair_Display({
@@ -20,10 +21,10 @@ const uiSans = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-const scriptAccent = Alex_Brush({
+const accentFont = Poppins({
   variable: "--font-script-accent",
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -40,13 +41,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${displaySerif.variable} ${uiSans.variable} ${scriptAccent.variable} h-full antialiased`}
+      className={`${displaySerif.variable} ${uiSans.variable} ${accentFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-brand-ivory text-brand-charcoal font-ui">
         <ProductsProvider>
           <CartProvider>
             <Header />
             <main className="flex-1 flex flex-col">{children}</main>
+            <Footer />
             <CartDrawer />
           </CartProvider>
         </ProductsProvider>

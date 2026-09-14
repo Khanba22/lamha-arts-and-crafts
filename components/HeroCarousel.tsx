@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Sparkles, ShoppingBag, ArrowDown } from "lucide-react";
+import Link from "next/link";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ArrowDown,
+  ShoppingBag,
+} from "lucide-react";
 import { ProductItem } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
 
@@ -13,98 +19,105 @@ interface HeroCarouselProps {
 
 export function HeroCarousel({ products, loading }: HeroCarouselProps) {
   const { addToCart } = useCart();
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [touchDeltaX, setTouchDeltaX] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
+  const [transitioning, setTransitioning] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Filter for highlighted products with images, or fallback to first products with images
   const slides = React.useMemo(() => {
     const withImages = products.filter((p) => p.images && p.images.length > 0);
     const highlighted = withImages.filter((p) => p.highlighted);
-    const chosen = highlighted.length >= 3 ? highlighted.slice(0, 6) : withImages.slice(0, 6);
-    return chosen;
+    return highlighted.length > 0 ? highlighted : withImages.slice(0, 6);
   }, [products]);
 
   const totalSlides = slides.length;
 
-  // Chaining navigation: left from 0 goes to last, right from last goes to 0
+  // Ensure index stays in bounds if slides count changes
+  useEffect(() => {
+    if (currentIndex >= totalSlides && totalSlides > 0) {
+      setCurrentIndex(0);
+    }
+  }, [totalSlides, currentIndex]);
+
+  // Scroll-out parallax tracking
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const rect = el.getBoundingClientRect();
+      const visible = Math.min(1, Math.max(0, -rect.top / rect.height));
+      setScrollProgress(visible);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const goTo = useCallback(
+    (nextIdx: number) => {
+      if (transitioning || nextIdx === currentIndex) return;
+      setTransitioning(true);
+      setCurrentIndex(nextIdx);
+      setTimeout(() => setTransitioning(false), 700);
+    },
+    [transitioning, currentIndex],
+  );
+
   const goToPrev = useCallback(() => {
-    if (totalSlides === 0) return;
-    setCurrentIndex((prev) => (prev === 0 ? totalSlides - 1 : prev - 1));
-  }, [totalSlides]);
+    if (!totalSlides) return;
+    goTo(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
+  }, [goTo, currentIndex, totalSlides]);
 
   const goToNext = useCallback(() => {
-    if (totalSlides === 0) return;
-    setCurrentIndex((prev) => (prev === totalSlides - 1 ? 0 : prev + 1));
-  }, [totalSlides]);
+    if (!totalSlides) return;
+    goTo(currentIndex === totalSlides - 1 ? 0 : currentIndex + 1);
+  }, [goTo, currentIndex, totalSlides]);
 
-  // Auto-rotating in 2 seconds (2000ms), paused on hover or active touch/drag
   useEffect(() => {
     if (totalSlides <= 1 || isPaused || isDragging) return;
-
-    timerRef.current = setInterval(() => {
-      goToNext();
-    }, 2000);
-
+    timerRef.current = setInterval(goToNext, 4500);
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [totalSlides, isPaused, isDragging, goToNext]);
 
-  // Touch Swipe Handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
+  // Touch / drag
+  const onTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
     setTouchDeltaX(0);
     setIsPaused(true);
   };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const onTouchMove = (e: React.TouchEvent) => {
     if (touchStartX === null) return;
-    const currentX = e.touches[0].clientX;
-    setTouchDeltaX(currentX - touchStartX);
+    setTouchDeltaX(e.touches[0].clientX - touchStartX);
   };
-
-  const handleTouchEnd = () => {
+  const onTouchEnd = () => {
     if (touchStartX !== null) {
-      // Threshold of 40px for swipe trigger
-      if (touchDeltaX > 40) {
-        // Swiped right -> prev slide (or chaining from first to last)
-        goToPrev();
-      } else if (touchDeltaX < -40) {
-        // Swiped left -> next slide (or chaining from last to first)
-        goToNext();
-      }
+      if (touchDeltaX > 50) goToPrev();
+      else if (touchDeltaX < -50) goToNext();
     }
     setTouchStartX(null);
     setTouchDeltaX(0);
     setIsPaused(false);
   };
-
-  // Mouse Drag Handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const onMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setTouchStartX(e.clientX);
     setTouchDeltaX(0);
     setIsPaused(true);
   };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const onMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || touchStartX === null) return;
     setTouchDeltaX(e.clientX - touchStartX);
   };
-
-  const handleMouseUp = () => {
+  const onMouseUp = () => {
     if (isDragging && touchStartX !== null) {
-      if (touchDeltaX > 40) {
-        goToPrev();
-      } else if (touchDeltaX < -40) {
-        goToNext();
-      }
+      if (touchDeltaX > 50) goToPrev();
+      else if (touchDeltaX < -50) goToNext();
     }
     setIsDragging(false);
     setTouchStartX(null);
@@ -112,174 +125,227 @@ export function HeroCarousel({ products, loading }: HeroCarouselProps) {
     setIsPaused(false);
   };
 
-  const handleMouseLeave = () => {
-    if (isDragging) {
-      handleMouseUp();
-    }
-    setIsPaused(false);
-  };
-
   if (loading) {
     return (
-      <div className="w-full h-80 sm:h-96 md:h-[460px] bg-brand-cream/50 animate-pulse flex items-center justify-center border-b border-border-soft">
-        <div className="flex flex-col items-center gap-2">
-          <Sparkles className="w-8 h-8 text-brand-gold animate-spin" />
-          <span className="font-serif text-sm text-brand-peacock">Loading featured handcrafted decor...</span>
-        </div>
-      </div>
+      <div className="w-full h-[70svh] md:h-[92vh] lg:h-[calc(100vh-5rem)] min-h-[380px] md:min-h-[550px] bg-brand-cream animate-pulse" />
     );
   }
+  if (!totalSlides) return null;
 
-  if (totalSlides === 0) {
-    return null;
-  }
+  const slide = slides[currentIndex];
+  const hasDiscount =
+    slide.discount_price > 0 && slide.discount_price < slide.price;
+  const displayPrice = hasDiscount ? slide.discount_price : slide.price;
 
-  const currentSlide = slides[currentIndex];
-  const hasRealDiscount =
-    currentSlide.discount_price > 0 && currentSlide.discount_price < currentSlide.price;
-  const displayPrice = hasRealDiscount ? currentSlide.discount_price : currentSlide.price;
+  // Scroll-out: content lifts and fades as user scrolls
+  const contentOpacity = Math.max(0, 1 - scrollProgress * 2.5);
+  const contentY = scrollProgress * 80;
 
   return (
     <section
-      className="relative w-full overflow-hidden bg-brand-cream/60 border-b border-border-soft select-none"
+      ref={sectionRef}
+      className="relative w-full h-[70svh] md:h-[92vh] lg:h-[calc(100vh-5rem)] min-h-[380px] md:min-h-[550px] overflow-hidden select-none"
       onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onMouseLeave={() => {
+        if (isDragging) onMouseUp();
+        setIsPaused(false);
+      }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
       aria-roledescription="carousel"
-      aria-label="Featured Collections Carousel"
+      aria-label="Featured Collections"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-14">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center min-h-[360px] md:min-h-[420px]">
-          {/* Left Text / Info Panel */}
-          <div className="md:col-span-6 lg:col-span-7 flex flex-col justify-center space-y-4 text-left">
-            <div className="inline-flex items-center gap-2 w-fit rounded-full border border-border-gold bg-gold-tint px-3 py-1 text-xs font-semibold text-brand-gold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Featured Heritage Collection</span>
-            </div>
+      {/* Background slides */}
+      {slides.map((s, idx) => (
+        <div
+          key={s.id}
+          className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+          style={{
+            opacity: idx === currentIndex ? 1 : 0,
+            zIndex: idx === currentIndex ? 1 : 0,
+          }}
+          aria-hidden={idx !== currentIndex}
+        >
+          <Image
+            src={s.images[0]}
+            alt={s.name}
+            fill
+            priority={idx === 0}
+            className="object-cover object-center"
+            sizes="100vw"
+            unoptimized
+          />
+        </div>
+      ))}
 
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-brand-peacock tracking-tight leading-tight">
-              {currentSlide.name}
-            </h2>
+      {/* Vignette overlay */}
+      <div
+        className="absolute inset-0 z-10"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(14,22,20,0.85) 0%, rgba(14,22,20,0.45) 45%, rgba(14,22,20,0.15) 75%, transparent 100%)",
+        }}
+      />
+      {/* Subtle top bar fade for header legibility */}
+      <div
+        className="absolute inset-x-0 top-0 h-28 z-10"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(14,22,20,0.35) 0%, transparent 100%)",
+        }}
+      />
 
-            {currentSlide.one_liner ? (
-              <p className="font-sans text-sm sm:text-base text-brand-charcoal/80 max-w-lg leading-relaxed">
-                {currentSlide.one_liner}
-              </p>
-            ) : (
-              <p className="font-sans text-sm sm:text-base text-brand-charcoal/80 max-w-lg leading-relaxed">
-                {currentSlide.description?.slice(0, 140)}...
-              </p>
+      {/* Left arrow */}
+      <button
+        onClick={goToPrev}
+        className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 items-center justify-center rounded-full text-brand-ivory/60 hover:text-brand-ivory transition-colors"
+        style={{
+          background: "rgba(14,22,20,0.18)",
+          backdropFilter: "blur(4px)",
+        }}
+        aria-label="Previous"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+
+      {/* Right arrow */}
+      <button
+        onClick={goToNext}
+        className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 items-center justify-center rounded-full text-brand-ivory/60 hover:text-brand-ivory transition-colors"
+        style={{
+          background: "rgba(14,22,20,0.18)",
+          backdropFilter: "blur(4px)",
+        }}
+        aria-label="Next"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
+      {/* Centered Content — scrolls up and fades out */}
+      <div
+        className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6 sm:px-16 pb-14 sm:pb-0 pointer-events-none"
+        style={{
+          opacity: contentOpacity,
+          transform: `translateY(-${contentY}px)`,
+          transition: "none",
+        }}
+      >
+        <div className="max-w-2xl w-full pointer-events-auto space-y-5">
+          {/* Category label — subdued, no icon */}
+          <p className="font-sans text-xs font-semibold uppercase tracking-[0.22em] text-brand-ivory/55">
+            {slide.category}
+          </p>
+
+          {/* Product name */}
+          <h2
+            className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-ivory leading-tight"
+            style={{ textShadow: "0 2px 32px rgba(0,0,0,0.5)" }}
+          >
+            {slide.name}
+          </h2>
+
+          {/* One-liner */}
+          {(slide.one_liner || slide.description) && (
+            <p className="font-sans text-sm sm:text-base text-brand-ivory/65 max-w-md mx-auto leading-relaxed">
+              {slide.one_liner ?? slide.description?.slice(0, 120) + "…"}
+            </p>
+          )}
+
+          {/* Price */}
+          <div className="flex items-baseline justify-center gap-2.5">
+            <span className="font-price text-2xl sm:text-3xl font-bold text-brand-ivory tracking-tight">
+              ₹{displayPrice}
+            </span>
+            {hasDiscount && (
+              <span className="font-price text-sm text-brand-ivory/40 line-through">
+                ₹{slide.price}
+              </span>
             )}
-
-            {/* Price & Action Row */}
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <div className="flex items-baseline gap-2">
-                <span className="font-serif text-2xl sm:text-3xl font-bold text-brand-peacock">
-                  ₹{displayPrice}
-                </span>
-                {hasRealDiscount && (
-                  <span className="font-sans text-sm text-brand-charcoal/50 line-through">
-                    ₹{currentSlide.price}
-                  </span>
-                )}
-              </div>
-
-              <button
-                onClick={() =>
-                  addToCart(
-                    {
-                      id: currentSlide.id,
-                      name: currentSlide.name,
-                      price: currentSlide.price,
-                      discount_price: currentSlide.discount_price,
-                      image: currentSlide.images[0],
-                    },
-                    1
-                  )
-                }
-                className="inline-flex items-center gap-2 rounded-full bg-brand-peacock px-5 py-2.5 text-sm font-semibold text-brand-ivory shadow-card hover:bg-brand-peacock/90 hover:shadow-card-hover transition-all active:scale-[0.98]"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Add to Cart</span>
-              </button>
-
-              <a
-                href="#our-products"
-                className="inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-brand-ivory px-4 py-2.5 text-sm font-medium text-brand-charcoal hover:border-brand-peacock hover:text-brand-peacock transition-colors"
-              >
-                <span>Browse All</span>
-                <ArrowDown className="w-3.5 h-3.5" />
-              </a>
-            </div>
           </div>
 
-          {/* Right Product Image Showcase */}
-          <div className="md:col-span-6 lg:col-span-5 flex items-center justify-center">
-            <div className="relative w-full max-w-md aspect-square rounded-2xl border border-border-gold bg-brand-ivory p-4 shadow-card hover:shadow-card-hover transition-all">
-              <div className="relative w-full h-full rounded-xl overflow-hidden bg-brand-cream/50 flex items-center justify-center">
-                <Image
-                  src={currentSlide.images[0]}
-                  alt={currentSlide.name}
-                  fill
-                  priority
-                  className="object-contain p-2 transition-transform duration-500 hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 400px"
-                  unoptimized
-                />
-              </div>
+          {/* CTA buttons */}
+          <div className="flex items-center justify-center gap-3 flex-wrap pt-1">
+            <button
+              onClick={() =>
+                addToCart(
+                  {
+                    id: slide.id,
+                    name: slide.name,
+                    price: slide.price,
+                    discount_price: slide.discount_price,
+                    image: slide.images[0],
+                  },
+                  1,
+                )
+              }
+              className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-brand-ivory transition-all active:scale-[0.97]"
+              style={{
+                background: "rgba(20,107,107,0.75)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(20,107,107,0.5)",
+              }}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Add to Bag
+            </button>
 
-              {/* Category Pill Overlay */}
-              <div className="absolute top-6 left-6 rounded-full bg-brand-ivory/90 backdrop-blur-xs border border-border-soft px-3 py-1 text-xs font-semibold text-brand-peacock shadow-card">
-                {currentSlide.category}
-              </div>
-            </div>
+            <Link
+              href={`/products/${slide.id}`}
+              className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium text-brand-ivory/80 hover:text-brand-ivory transition-all"
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.14)",
+              }}
+            >
+              View Details
+            </Link>
           </div>
         </div>
+      </div>
 
-        {/* Carousel Controls: Arrows & Indicators */}
-        <div className="mt-6 flex items-center justify-between border-t border-border-soft pt-4">
-          {/* Slide Indicator Dots */}
-          <div className="flex items-center gap-2">
+      {/* Bottom bar: dots + scroll cue */}
+      <div
+        className="absolute bottom-0 inset-x-0 z-20 flex flex-col items-center pb-7 gap-5 pointer-events-none"
+        style={{
+          opacity: contentOpacity,
+          transform: `translateY(-${contentY * 0.5}px)`,
+          transition: "none",
+        }}
+      >
+        {/* Dot indicators */}
+        {totalSlides > 1 && (
+          <div className="flex items-center gap-2 pointer-events-auto">
             {slides.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => setCurrentIndex(idx)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
+                onClick={() => goTo(idx)}
+                className={`h-1 rounded-full transition-all duration-400 ${
                   currentIndex === idx
-                    ? "w-8 bg-brand-peacock"
-                    : "w-2.5 bg-brand-charcoal/20 hover:bg-brand-charcoal/40"
+                    ? "w-7 bg-brand-ivory/80"
+                    : "w-1 bg-brand-ivory/25 hover:bg-brand-ivory/45"
                 }`}
-                aria-label={`Go to slide ${idx + 1}`}
+                aria-label={`Slide ${idx + 1}`}
               />
             ))}
           </div>
+        )}
 
-          {/* Previous / Next Arrow Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={goToPrev}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-brand-ivory text-brand-charcoal hover:border-brand-peacock hover:bg-peacock-tint hover:text-brand-peacock shadow-card transition-all"
-              aria-label="Previous slide (swipes left/chains to last)"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <span className="font-sans text-xs font-medium text-brand-charcoal/60 px-1">
-              {currentIndex + 1} / {totalSlides}
-            </span>
-            <button
-              onClick={goToNext}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-border-soft bg-brand-ivory text-brand-charcoal hover:border-brand-peacock hover:bg-peacock-tint hover:text-brand-peacock shadow-card transition-all"
-              aria-label="Next slide (swipes right/chains to first)"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        {/* Explore All scroll cue */}
+        <a
+          href="#our-products"
+          className="pointer-events-auto flex flex-col items-center gap-1.5 text-brand-ivory/40 hover:text-brand-ivory/70 transition-colors"
+          aria-label="Scroll to products"
+        >
+          <span className="font-sans text-[10px] font-medium uppercase tracking-[0.2em]">
+            Explore All
+          </span>
+          <ArrowDown className="w-3.5 h-3.5 animate-bounce" />
+        </a>
       </div>
     </section>
   );

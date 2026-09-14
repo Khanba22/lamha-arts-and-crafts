@@ -54,6 +54,7 @@
   --font-serif: var(--font-display-serif);
   --font-script: var(--font-script-accent);
   --font-sans: var(--font-ui-sans);
+  --font-price: var(--font-script-accent);
 }
 
 body {
@@ -69,7 +70,15 @@ body {
 }
 
 .font-script {
-  font-family: var(--font-script-accent), cursive;
+  font-family: var(--font-script-accent), sans-serif;
+}
+
+.font-accent {
+  font-family: var(--font-script-accent), sans-serif;
+}
+
+.font-price {
+  font-family: var(--font-script-accent), sans-serif;
 }
 
 .font-ui {

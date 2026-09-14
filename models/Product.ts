@@ -12,6 +12,8 @@ export interface IProduct extends Document {
   description: string;
   highlighted: boolean;
   inventory_size: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const ProductSchema = new Schema<IProduct>(

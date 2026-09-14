@@ -44,5 +44,5 @@ All styling must adhere strictly to the design tokens defined in `app/globals.cs
   - `shadow-gold` (Glow for featured items)
 - **Typography**:
   - `font-display` / `font-serif` (Playfair Display for headlines & titles)
-  - `font-script` (Alex Brush for handwritten accents in brand-pink)
+  - `font-script` / `font-accent` (Poppins for clean modern accents & subtitles in brand-pink)
   - `font-ui` / `font-sans` (Plus Jakarta Sans for prices, buttons, information)
