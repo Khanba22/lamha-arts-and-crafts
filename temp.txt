@@ -1,0 +1,58 @@
+Scrape out the products their https://www.lamhaartsandcraft.com/
+
+in the following json format
+
+{
+   name
+   price
+   discount_price
+   one_liner
+   description
+   category
+   tag:best_seller|new_arrival|sale
+   subcategory
+   images:[],
+   inventory_quantity
+}
+
+now how to proceed so when you will open the url you will find a list of all the products
+
+
+
+<div class="group relative flex flex-col overflow-hidden bg-transparent transition-all duration-300 "><a class="relative block aspect-square w-full max-w-[260px] mx-auto overflow-hidden rounded-[4px] bg-peacock/5 focus:outline-none" href="/product/d8f0da56-2afc-4a5b-96b4-1a7115282d97"><img alt="Evileye jute potli" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110" src="https://bmhdc6sqxnmev2vy.public.blob.vercel-storage.com/inbound4233600472751763986-lr5lpxgJJsjexA8BzNIxWnXbYBDK6m.webp"><div class="absolute top-3 left-3 right-3 z-10 flex items-start justify-between gap-1.5 pointer-events-none"><span class="truncate max-w-[62%] rounded-[2px] bg-ivory/95 px-2 py-0.5 text-[9px] font-bold tracking-widest text-peacock uppercase shadow-xs">Potlis</span><span class="shrink-0 rounded-full bg-crimson px-2.5 py-0.5 text-[9px] font-serif font-bold italic tracking-widest text-ivory uppercase shadow-md ml-auto">BESTSELLER</span></div><div class="absolute bottom-0 left-0 right-0 z-10 translate-y-full transition-transform duration-300 group-hover:translate-y-0"><button class="w-full border border-peacock bg-ivory/95 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-peacock transition-colors duration-200 hover:bg-peacock hover:text-ivory cursor-pointer" aria-label="Quick add Evileye jute potli to cart">Quick Add</button></div></a><div class="pt-3 pb-1"><a class="focus:outline-none" href="/product/d8f0da56-2afc-4a5b-96b4-1a7115282d97"><h3 class="font-serif text-sm font-bold text-charcoal transition-colors duration-200 hover:text-peacock line-clamp-2 uppercase tracking-wide break-words [overflow-wrap:anywhere]">Evileye jute potli</h3></a><p class="mt-1 font-sans text-xs text-charcoal/55 line-clamp-2 break-words [overflow-wrap:anywhere]"></p><div class="mt-2 flex items-center justify-between"><span class="font-sans text-base font-bold text-peacock">₹180</span></div></div></div>
+
+
+So now in this 
+
+
+In this format you need to extract all the necesary details like 
+Potlis is the sub category
+Evil Eye Jute Potli is the name
+180 is the price (keep the discounted price same for now)
+best seller is the tag
+no description
+
+you can skip the inventory quantity
+you can skip the one_liner as there is no description
+
+the href is the actual product details in which you need to visit so extract that too since there only you will find all the product images so when you visit on the page for example in this case its https://www.lamhaartsandcraft.com/product/d8f0da56-2afc-4a5b-96b4-1a7115282d97
+
+then you will find a component like this 
+<div class="flex flex-col"><div class="aspect-square w-full overflow-hidden rounded-[3px] border border-peacock/8 bg-ivory shadow-sm"><img alt="Evileye jute potli" class="h-full w-full object-cover" src="https://bmhdc6sqxnmev2vy.public.blob.vercel-storage.com/inbound4233600472751763986-lr5lpxgJJsjexA8BzNIxWnXbYBDK6m.webp"></div><div class="mt-4 flex flex-wrap gap-3"><button type="button" class="h-16 w-16 overflow-hidden rounded-[3px] border-2 transition-all cursor-pointer border-peacock bg-peacock/5"><img alt="Thumbnail 1" class="h-full w-full object-cover" src="https://bmhdc6sqxnmev2vy.public.blob.vercel-storage.com/inbound4233600472751763986-lr5lpxgJJsjexA8BzNIxWnXbYBDK6m.webp"></button><button type="button" class="h-16 w-16 overflow-hidden rounded-[3px] border-2 transition-all cursor-pointer border-peacock/10 hover:border-peacock/30 bg-ivory"><img alt="Thumbnail 2" class="h-full w-full object-cover" src="https://bmhdc6sqxnmev2vy.public.blob.vercel-storage.com/inbound7572851850908432011-KSh6Nl0Tn2YYYJ8Rdxjx33csogPQzT.webp"></button></div><div class="mt-8 grid grid-cols-3 gap-4 border-t border-b border-peacock/10 py-6 text-center"><div class="flex flex-col items-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check h-5 w-5 text-peacock" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg><span class="mt-2 text-[10px] font-bold tracking-widest uppercase text-charcoal/80">Artisan Crafted</span><span class="mt-0.5 text-[9px] text-charcoal/50">100% Hand-designed</span></div><div class="flex flex-col items-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-truck h-5 w-5 text-peacock" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"></path><path d="M15 18H9"></path><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"></path><circle cx="17" cy="18" r="2"></circle><circle cx="7" cy="18" r="2"></circle></svg><span class="mt-2 text-[10px] font-bold tracking-widest uppercase text-charcoal/80">Safe Delivery</span><span class="mt-0.5 text-[9px] text-charcoal/50">Carefully packaged</span></div><div class="flex flex-col items-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw h-5 w-5 text-peacock" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg><span class="mt-2 text-[10px] font-bold tracking-widest uppercase text-charcoal/80">Support Local</span><span class="mt-0.5 text-[9px] text-charcoal/50">Home-grown business</span></div></div></div>
+
+So in this the main header image should be the index 0 image and the others must be the other reference image
+When you download and save the images it should be in the format of the product images with the ids as the seperator and image as 1 2 3....
+so for example
+images 
+    id
+       0.png
+       1.png
+       2.png
+    id2
+       0.png....
+
+
+and then save them as urls in image url json and return the final json and updatted tagsa
+
+
+Now do the same for all the products on the page

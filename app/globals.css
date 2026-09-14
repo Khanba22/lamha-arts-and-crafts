@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand Core Colors (from design.md) */
+  --color-brand-peacock: #146B6B;
+  --color-brand-pink: #E6598C;
+  --color-brand-gold: #B98A3E;
+  --color-brand-ivory: #FBF7F0;
+  --color-brand-cream: #F3ECE0;
+  --color-brand-charcoal: #20302E;
+
+  /* Semantic Borders & Dividers */
+  --color-border-soft: rgba(20, 107, 107, 0.12);
+  --color-border-subtle: rgba(32, 48, 46, 0.08);
+  --color-border-gold: rgba(185, 138, 62, 0.40);
+  --color-border-pink: rgba(230, 89, 140, 0.35);
+
+  /* Semantic Tints / Alpha Overlays */
+  --color-peacock-tint: rgba(20, 107, 107, 0.08);
+  --color-peacock-tint-strong: rgba(20, 107, 107, 0.15);
+  --color-pink-tint: rgba(230, 89, 140, 0.10);
+  --color-gold-tint: rgba(185, 138, 62, 0.12);
+
+  /* Shadows (never pure black, warm charcoal tint) */
+  --shadow-card: 0 4px 20px -2px rgba(32, 48, 46, 0.06);
+  --shadow-card-hover: 0 10px 25px -4px rgba(32, 48, 46, 0.12);
+  --shadow-dropdown: 0 12px 32px -4px rgba(32, 48, 46, 0.15);
+  --shadow-gold: 0 0 16px -2px rgba(185, 138, 62, 0.25);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-brand-peacock: var(--color-brand-peacock);
+  --color-brand-pink: var(--color-brand-pink);
+  --color-brand-gold: var(--color-brand-gold);
+  --color-brand-ivory: var(--color-brand-ivory);
+  --color-brand-cream: var(--color-brand-cream);
+  --color-brand-charcoal: var(--color-brand-charcoal);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-border-soft: var(--color-border-soft);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-gold: var(--color-border-gold);
+  --color-border-pink: var(--color-border-pink);
+
+  --color-peacock-tint: var(--color-peacock-tint);
+  --color-peacock-tint-strong: var(--color-peacock-tint-strong);
+  --color-pink-tint: var(--color-pink-tint);
+  --color-gold-tint: var(--color-gold-tint);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-dropdown: var(--shadow-dropdown);
+  --shadow-gold: var(--shadow-gold);
+
+  --font-serif: var(--font-display-serif);
+  --font-script: var(--font-script-accent);
+  --font-sans: var(--font-ui-sans);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-brand-ivory);
+  color: var(--color-brand-charcoal);
+  font-family: var(--font-ui-sans), system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Typography Utilities */
+.font-display {
+  font-family: var(--font-display-serif), Georgia, serif;
+}
+
+.font-script {
+  font-family: var(--font-script-accent), cursive;
+}
+
+.font-ui {
+  font-family: var(--font-ui-sans), system-ui, sans-serif;
 }
